@@ -1,6 +1,5 @@
-# Adapted from Homework 2 (Zoo API) for Exam 1 - Troop API
-
 from flask import Flask, request, jsonify
+from datetime import datetime
 import creds
 from sql import create_connection
 
@@ -11,8 +10,8 @@ app.config["DEBUG"] = True
 def index():
     return "Troop API is running"
 
-# POST endpoint to add new troop
-# Adapted from Homework 2 (Zoo API) for Exam 1 - Troop API
+# POST endpoint to add a new troop
+# Based on the pattern used in Homework 2 (Zoo API)
 @app.route('/api/troop', methods=['POST'])
 def add_troop():
     data = request.get_json()
@@ -39,8 +38,8 @@ def add_troop():
     else:
         return "Database connection error.", 500
 
-# DELETE endpoint to remove a troop by leader_email
-# Adapted from Homework 2 (Zoo API) for Exam 1 - Troop API
+# DELETE endpoint to remove a troop by leader email
+# Also based on Homework 2, adapted to work with troop data
 @app.route('/api/troop', methods=['DELETE'])
 def delete_troop():
     data = request.get_json()
@@ -61,11 +60,25 @@ def delete_troop():
     else:
         return "Database connection error.", 500
 
-# GET endpoint to retrieve troop by troop_number
-# Adapted from Homework 2 (Zoo API) for Exam 1 - Troop API
+# Helper function to validate access code and check expiration date
+# This is part of the extra credit for token-based access
+def is_valid_access_code(access_code):
+    valid_code = "BSA2025TOKEN"
+    expires = datetime(2025, 12, 31, 23, 59, 59)
+    return access_code == valid_code and datetime.now() <= expires
+
+# GET endpoint to fetch a troop using the troop number
+# Includes token validation as part of extra credit
 @app.route('/api/troop', methods=['GET'])
-def get_troop_by_number():
+def fetch_troop_by_number():
     troop_number = request.args.get('troop_number')
+    access_code = request.args.get('access_code')
+
+    if not access_code:
+        return "Access code required to use this endpoint", 401
+
+    if not is_valid_access_code(access_code):
+        return "Invalid or expired access code", 403
 
     if not troop_number:
         return "Missing troop_number query parameter", 400
@@ -76,11 +89,11 @@ def get_troop_by_number():
     if conn:
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM Troop WHERE troop_number = %s", (troop_number,))
-        result = cursor.fetchone()
+        troop = cursor.fetchone()
         conn.close()
 
-        if result:
-            return jsonify(result), 200
+        if troop:
+            return jsonify(troop), 200
         else:
             return f"No troop found with number {troop_number}", 404
     else:
