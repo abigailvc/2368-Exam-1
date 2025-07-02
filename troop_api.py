@@ -12,6 +12,7 @@ def index():
     return "Troop API is running"
 
 # POST endpoint to add new troop
+# Adapted from Homework 2 (Zoo API) for Exam 1 - Troop API
 @app.route('/api/troop', methods=['POST'])
 def add_troop():
     data = request.get_json()
@@ -60,6 +61,31 @@ def delete_troop():
     else:
         return "Database connection error.", 500
 
-# Now the app starts after all routes are defined
+# GET endpoint to retrieve troop by troop_number
+# Adapted from Homework 2 (Zoo API) for Exam 1 - Troop API
+@app.route('/api/troop', methods=['GET'])
+def get_troop_by_number():
+    troop_number = request.args.get('troop_number')
+
+    if not troop_number:
+        return "Missing troop_number query parameter", 400
+
+    myCreds = creds.Creds()
+    conn = create_connection(myCreds.hostname, myCreds.uname, myCreds.passwd, myCreds.dbname)
+
+    if conn:
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM Troop WHERE troop_number = %s", (troop_number,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if result:
+            return jsonify(result), 200
+        else:
+            return f"No troop found with number {troop_number}", 404
+    else:
+        return "Database connection error.", 500
+
+# Start the Flask app
 if __name__ == '__main__':
     app.run()
